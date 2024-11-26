@@ -2,6 +2,7 @@ import TextArea from "antd/es/input/TextArea";
 import {Alert, Divider, Space, Spin, Typography} from "antd";
 import {useEffect, useState} from "react";
 import {useSearchParams} from 'react-router-dom';
+import {isMobile} from 'react-device-detect';
 
 const API_PATH = "/v1/chat/completions";
 const SIMPLE_PROMPT = `
@@ -44,7 +45,7 @@ function App() {
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
-  
+
   const [timeoutId, setTimeoutId] = useState(0);
 
   const handleInputChange = (event) => {
@@ -107,7 +108,7 @@ function App() {
 
   return (
     <div>
-      <div style={{maxWidth: 600, margin: "auto"}}>
+      <div style={{maxWidth: 600, margin: "auto", padding: "0 20px"}}>
         <div>
           <Header/>
           {!apiKey &&
@@ -188,7 +189,7 @@ const SimpleComponent = ({ result, loading }) => {
 const PhoneticSymbols = () => {
   return (
     <>
-      <Space size={60} align={"start"}>
+      <Space size={isMobile ? 20 : 60} align={"start"}>
 
         <Space direction="vertical" size={1} align={"start"}>
           <Typography.Text strong>Monophthongs</Typography.Text>
