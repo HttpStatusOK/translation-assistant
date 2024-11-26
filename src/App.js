@@ -21,7 +21,7 @@ const SIMPLE_PROMPT = `
 
 ## 注意事项
 
-- 音标需要使用 DJ 音标（Daniel Jones，亦即英式音标），这里是所有常见的 DJ 音标美式发音符号，以空格分隔：iː ɪ e æ ɑː ɒ ɔː ʊ uː ʌ ɜːr ər eɪ aɪ oʊ aʊ ɔɪ p b t d k ɡ tʃ dʒ f v θ ð s z ʃ ʒ h m n ŋ l r j w
+- 音标需要使用DJ音标，以下是所有音标：iː ɪ e æ ɑː ɒ ɔː ʊ uː ʌ ɜːr ər eɪ aɪ oʊ aʊ ɔɪ p b t d k ɡ tʃ dʒ f v θ ð s z ʃ ʒ h m n ŋ l r j w，如果你返回的音标不在其中，那一定是版本没用对，请检查是否符合版本要求。
 
 ## 输出格式
 
@@ -68,6 +68,10 @@ function App() {
     setTimeoutId(id);
   };
 
+  const recitation = (text) => {
+    const URL = `https://dict.youdao.com/dictvoice?audio=${text}&type=2`
+    // todo
+  }
 
   const fetchData = (value) => {
     setLoading(true);
