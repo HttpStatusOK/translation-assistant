@@ -1,9 +1,39 @@
 import TextArea from "antd/es/input/TextArea";
-import {Alert, Divider, message, Skeleton, Space, Spin, Typography} from "antd";
+import {Alert, Divider, Space, Spin, Typography} from "antd";
 import {useEffect, useState} from "react";
 import {useSearchParams} from 'react-router-dom';
 
 const API_PATH = "/v1/chat/completions";
+const SIMPLE_PROMPT = `
+## 主要任务
+
+你是一位资深且专业的翻译员，具备出色的翻译能力，你的任务是能精准且流畅地将各类文本翻译成中文和英文，并且附带音标标注。
+
+## 规则
+
+- 翻译时要准确传达原文的事实和背景。
+- 理解用户输入的文本，确保符合语言习惯，你可以调整语气和风格，并考虑到某些词语的文化内涵和地区差异。
+- 同时作为翻译家，需将原文翻译成具有信达雅标准的译文。
+- "信" 即忠实于原文的内容与意图；
+- "达" 意味着译文应通顺易懂，表达清晰；
+- "雅" 则追求译文的文化审美和语言的优美。目标是创作出既忠于原作精神，又符合目标语言文化和读者审美的翻译。
+
+## 注意事项
+
+- 音标需要使用 DJ 音标（Daniel Jones，亦即英式音标），这里是所有常见的 DJ 音标美式发音符号，以空格分隔：iː ɪ e æ ɑː ɒ ɔː ʊ uː ʌ ɜːr ər eɪ aɪ oʊ aʊ ɔɪ p b t d k ɡ tʃ dʒ f v θ ð s z ʃ ʒ h m n ŋ l r j w
+
+## 输出格式
+
+如果输入文本是中文，则返回：
+{英语译文}\\n{对应的音标}
+
+如果输入文本是非中文，则返回：
+{中文译文}\\n{英语译文}\\n{对应的音标}
+
+## 初始化
+
+我已准备好接收您需要翻译的文本。请直接粘贴或输入，我将以一个资深且专业的翻译员身份翻译这段文本。
+`
 
 function App() {
   const [searchParams] = useSearchParams();
@@ -14,10 +44,7 @@ function App() {
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
-  const [resultJSON, setResultJSON] = useState(null);
-
-  const [professionalModel] = useState(false);
-
+  
   const [timeoutId, setTimeoutId] = useState(0);
 
   const handleInputChange = (event) => {
@@ -30,7 +57,6 @@ function App() {
 
     if (!value) {
       setResult(null);
-      setResultJSON(null);
       return;
     }
 
@@ -44,16 +70,12 @@ function App() {
 
   const fetchData = (value) => {
     setLoading(true);
-
-    const simple = "你是一名翻译专家，你要做的是将我发送的每一句话翻译成英文，无论是什么内容，要求第一行返回英文译文，第二行返回对应的DJ音标（Daniel Jones，亦即英式音标）";
-    const professional = "你是一条翻译API，你要做的是将我发送的每一句话翻译成英文，无论是什么内容，要求返回经过分词的JSON数组：a是原文，b是译文，c是译文对应DJ音标。参考格式 \"a\":[{\"id\":1,\"text\":\"特斯拉\"},{\"id\":2,\"text\":\"是\"},{\"id\":3,\"text\":\"什么\"}],\"b\":[{\"id\":3,\"text\":\"What\"},{\"id\":2,\"text\":\"is\"},{\"id\":1,\"text\":\"Tesla\"}],\"c\":[{\"id\":3,\"text\":\"wɑt\"},{\"id\":2,\"text\":\"ɪz\"},{\"id\":1,\"text\":\"ˈtɛslə\"}]}。注意，数组是按照单词顺序排序，但id需要原文/译文/音标一一对应，比如原文中 特斯拉排第一，id是1，译文中Tesla 排第三，但他需要关联原文的特斯拉，所以他的id应为1。返回的内容不要加任何markdown格式化，如果无法翻译，直接返回-1";
-
     const body = {
       model: "gpt-4o-2024-11-20",
       messages: [
         {
           role: "system",
-          content: professionalModel ? professional : simple
+          content: SIMPLE_PROMPT
         },
         {
           role: "user",
@@ -70,15 +92,6 @@ function App() {
         }
 
         const text = res.choices[0].message.content;
-        if (professionalModel) {
-          if (text === "-1") {
-            message.warning("当前无法翻译，请重试")
-          } else {
-            setResultJSON(JSON.parse(text));
-          }
-          return;
-        }
-
         setResult(text);
       })
       .finally(() => setLoading(false))
@@ -116,8 +129,7 @@ function App() {
             }}
           />
           <Divider orientation="right"/>
-          {!professionalModel && <SimpleComponent result={result} loading={loading}/>}
-          {professionalModel && <ProfessionalComponent resultJSON={resultJSON} loading={loading}/>}
+          <SimpleComponent result={result} loading={loading}/>
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{minHeight: 80}}></div>
@@ -132,7 +144,7 @@ const Header = () => {
   return (
     <>
       <Typography.Title level={2} style={{ marginBottom: 0 }}>Translation Assistant</Typography.Title>
-      <Typography.Text type={"secondary"}>Created by&nbsp;
+      <Typography.Text italic type={"secondary"}>Created by&nbsp;
         <Typography.Link
           target={"_blank"}
           href={"https://github.com/HttpStatusOK"}
@@ -143,7 +155,7 @@ const Header = () => {
           Edison
         </Typography.Link>.&nbsp;
       </Typography.Text>
-      <Typography.Text type={"secondary"}>View&nbsp;
+      <Typography.Text italic type={"secondary"}>View&nbsp;
         <Typography.Link
           target={"_blank"}
           href={"https://github.com/HttpStatusOK/translation-assistant"}
@@ -152,7 +164,8 @@ const Header = () => {
           style={{ color: "#898989" }}
         >
           source code
-        </Typography.Link>.
+        </Typography.Link>.&nbsp;
+        <Typography.Text italic type={"secondary"}>Based on OpenAI development.</Typography.Text>
       </Typography.Text>
     </>
   )
@@ -172,62 +185,13 @@ const SimpleComponent = ({ result, loading }) => {
   )
 }
 
-const ProfessionalComponent = ({resultJSON, loading}) => {
-  const [highLightId, setHighLightId] = useState(null);
-
-  return (
-    <div style={{ textAlign: "left", padding: "4px 11px"}}>
-      {loading && <Skeleton active />}
-
-      {!loading &&
-        <>
-          {resultJSON && resultJSON.a.map(item => (
-            <Typography.Text
-              style={highLightId === item.id && { color: "red" }}
-              key={item.id} // 确保有唯一的key
-              mark={highLightId === item.id} // 此处比较以确定是否显示标记
-              onMouseEnter={() => setHighLightId(item.id)} // 设置高亮ID
-              onMouseLeave={() => setHighLightId(null)} // 清空高亮ID
-            >
-              {item.text}&nbsp;
-            </Typography.Text>
-          ))}
-          <br/>
-          {resultJSON && resultJSON.b.map(item => (
-            <Typography.Text
-              style={highLightId === item.id && { color: "red" }}
-              key={item.id} // 确保有唯一的key
-              mark={highLightId === item.id} // 此处比较以确定是否显示标记
-              onMouseEnter={() => setHighLightId(item.id)} // 设置高亮ID
-              onMouseLeave={() => setHighLightId(null)} // 清空高亮ID
-            >
-              {item.text}&nbsp;
-            </Typography.Text>
-          ))}
-          <br/>
-          {resultJSON && resultJSON.c.map(item => (
-            <Typography.Text
-              style={highLightId === item.id && { color: "red" }}
-              key={item.id} // 确保有唯一的key
-              mark={highLightId === item.id} // 此处比较以确定是否显示标记
-              onMouseEnter={() => setHighLightId(item.id)} // 设置高亮ID
-              onMouseLeave={() => setHighLightId(null)} // 清空高亮ID
-            >
-              {item.text}&nbsp;
-            </Typography.Text>
-          ))}
-        </>}
-    </div>
-  );
-};
-
 const PhoneticSymbols = () => {
   return (
     <>
       <Space size={60} align={"start"}>
 
         <Space direction="vertical" size={1} align={"start"}>
-          <Typography.Text strong>单元音</Typography.Text>
+          <Typography.Text strong>Monophthongs</Typography.Text>
           <Typography.Text>[ɑː] - class</Typography.Text>
           <Typography.Text>[ʌ] - cup</Typography.Text>
           <div style={{minHeight: 6}}></div>
@@ -248,7 +212,7 @@ const PhoneticSymbols = () => {
         </Space>
 
         <Space direction="vertical" size={1} align={"start"}>
-          <Typography.Text strong>双元音</Typography.Text>
+          <Typography.Text strong>Diphthong</Typography.Text>
           <Typography.Text>[eɪ] - day</Typography.Text>
           <Typography.Text>[aɪ] - boy</Typography.Text>
           <Typography.Text>[ɔɪ] - why</Typography.Text>
@@ -262,7 +226,7 @@ const PhoneticSymbols = () => {
         </Space>
 
         <Space direction="vertical" size={1} align={"start"}>
-          <Typography.Text strong>辅音音标</Typography.Text>
+          <Typography.Text strong>Consonant</Typography.Text>
           <Space align={"start"} size={"middle"}>
             <Space direction="vertical" size={1} align={"start"}>
               <Typography.Text>[p] - pat</Typography.Text>
@@ -294,9 +258,7 @@ const PhoneticSymbols = () => {
               <Typography.Text>[w] - we</Typography.Text>
             </Space>
           </Space>
-
         </Space>
-
       </Space>
     </>
   )
