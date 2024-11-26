@@ -68,10 +68,10 @@ function App() {
     setTimeoutId(id);
   };
 
-  const recitation = (text) => {
-    const URL = `https://dict.youdao.com/dictvoice?audio=${text}&type=2`
-    // todo
-  }
+  // const recitation = (text) => {
+  //   const URL = `https://dict.youdao.com/dictvoice?audio=${text}&type=2`
+  //   // todo
+  // }
 
   const fetchData = (value) => {
     setLoading(true);
