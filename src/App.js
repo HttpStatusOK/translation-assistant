@@ -263,7 +263,7 @@ const PhoneticSymbols = () => {
       <Space size={isMobile ? 20 : 60} align={"start"}>
 
       <Space direction="vertical" size={1} align={"start"}>
-          <Typography.Text strong>Monophthongs</Typography.Text>
+          <Typography.Text strong>单元音</Typography.Text>
           <Typography.Text>[ɑː] - class</Typography.Text>
           <Typography.Text>[ʌ] - cup</Typography.Text>
           <div style={{minHeight: 6}}></div>
@@ -284,7 +284,7 @@ const PhoneticSymbols = () => {
         </Space>
 
         <Space direction="vertical" size={1} align={"start"}>
-          <Typography.Text strong>Diphthong</Typography.Text>
+          <Typography.Text strong>双元音</Typography.Text>
           <Typography.Text>[eɪ] - day</Typography.Text>
           <Typography.Text>[aɪ] - boy</Typography.Text>
           <Typography.Text>[ɔɪ] - why</Typography.Text>
@@ -298,7 +298,7 @@ const PhoneticSymbols = () => {
         </Space>
 
         <Space direction="vertical" size={1} align={"start"}>
-          <Typography.Text strong>Consonant</Typography.Text>
+          <Typography.Text strong>辅音</Typography.Text>
           <Space align={"start"} size={"middle"}>
             <Space direction="vertical" size={1} align={"start"}>
               <Typography.Text>[p] - pat</Typography.Text>
