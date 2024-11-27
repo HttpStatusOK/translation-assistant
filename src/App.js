@@ -1,14 +1,15 @@
 import TextArea from "antd/es/input/TextArea";
-import {Alert, Divider, Space, Spin, Typography} from "antd";
-import {useEffect, useState} from "react";
+import {Alert, Button, Divider, message, Space, Spin, Tooltip, Typography} from "antd";
+import {useEffect, useRef, useState} from "react";
 import {useSearchParams} from 'react-router-dom';
 import {isMobile} from 'react-device-detect';
+import {SoundOutlined} from "@ant-design/icons";
 
 const API_PATH = "/v1/chat/completions";
-const SIMPLE_PROMPT = `
+const ASSISTANT_PROMPT = `
 ## 主要任务
 
-你是一位资深且专业的翻译员，具备出色的翻译能力，你的任务是能精准且流畅地将各类文本翻译成中文和英文，并且附带音标标注。
+我是一条资深且专业的翻译API，具备出色的翻译能力，我的任务是能精准且流畅地将各类文本翻译成中文和英文，并且附带音标标注。
 
 ## 规则
 
@@ -25,18 +26,26 @@ const SIMPLE_PROMPT = `
 
 ## 输出格式
 
-如果输入文本是英文，则返回：
-{中文译文}\\n{英文原文}\\n{对应的音标}
+我需要返回 JSON 格式數據，例如，當用户問我：what is tesla：
 
-如果输入文本是中文，则返回：
-{英语译文}\\n{对应的音标}
 
-如果输入文本是非中文，则返回：
-{中文译文}\\n{英语译文}\\n{对应的音标}
+我應返回：
+{
+  a: "特斯拉是什么" // a 表示中文译文，如果输入的是中文，则返回 null
+  b: [ // b 表示英文译文，无论
+    { w: "What", p: "ˈwɒt", z: "什么" }, // w表示单词，p表示该单词的音标，z表示该单词的中文译文
+    { w: "is", p: "ɪz", z: "是" },
+    { w: "Tesla", p: "ˈteslə", z: "特斯拉" },
+    { w: "?", p: "?" } // 标点符号也需要一个对象，p同样要返回标点符号
+  ]
+}
+
+
+注意，请将json压缩后再返回。不要加上任务格式，我只需要返回能被解析的json，如果遇到我无法翻译的，直接返回-1
 
 ## 初始化
 
-我已准备好接收您需要翻译的文本。请直接粘贴或输入，我将以一个资深且专业的翻译员身份翻译这段文本。
+我已准备好接收您需要翻译的文本。请直接粘贴或输入，我将以一个资深且专业的翻译API身份翻译这段文本。
 `
 
 function App() {
@@ -47,20 +56,21 @@ function App() {
 
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState("");
+
+  const [resultJSON, setResultJSON] = useState(null);
 
   const [timeoutId, setTimeoutId] = useState(0);
 
   const handleInputChange = (event) => {
     const { value } = event.target;
-    setInputValue(value.replaceAll("\n", ""));
+    setInputValue(value);
 
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
 
     if (!value) {
-      setResult(null);
+      setResultJSON(null);
       return;
     }
 
@@ -71,11 +81,6 @@ function App() {
     setTimeoutId(id);
   };
 
-  // const recitation = (text) => {
-  //   const URL = `https://dict.youdao.com/dictvoice?audio=${text}&type=2`
-  //   // todo
-  // }
-
   const fetchData = (value) => {
     setLoading(true);
     const body = {
@@ -83,7 +88,7 @@ function App() {
       messages: [
         {
           role: "system",
-          content: SIMPLE_PROMPT
+          content: ASSISTANT_PROMPT
         },
         {
           role: "user",
@@ -92,15 +97,30 @@ function App() {
       ]
     }
 
-    fetch(`${apiDomain}${API_PATH}`, { method: "POST", headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify(body)})
+    const config = {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "Api-Key": `${apiKey}`
+      },
+      body: JSON.stringify(body)
+    }
+
+    fetch(`${apiDomain}${API_PATH}`, config)
       .then(res => res.json())
       .then(res => {
         if (!inputValue && !value) {
           return;
         }
 
-        const text = res.choices[0].message.content;
-        setResult(text);
+        try {
+          const text = res.choices[0].message.content;
+          setResultJSON(JSON.parse(text));
+        } catch (e) {
+          message.warning(`该文本暂时无法翻译`)
+        }
+
       })
       .finally(() => setLoading(false))
   }
@@ -137,11 +157,11 @@ function App() {
             }}
           />
           <Divider orientation="right"/>
-          <SimpleComponent result={result} loading={loading}/>
+          <TranslationDisplay data={resultJSON} loading={loading} />
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{minHeight: 80}}></div>
-          <PhoneticSymbols/>
+          <PhoneticSymbols />
         </div>
       </div>
     </div>
@@ -150,7 +170,7 @@ function App() {
 
 const Header = () => {
   return (
-    <>
+    <div style={{ textAlign: "center" }}>
       <Typography.Title level={2} style={{ marginBottom: 0 }}>Translation Assistant</Typography.Title>
       <Typography.Text italic type={"secondary"}>Created by&nbsp;
         <Typography.Link
@@ -175,21 +195,65 @@ const Header = () => {
         </Typography.Link>.&nbsp;
         <Typography.Text italic type={"secondary"}>Based on OpenAI development.</Typography.Text>
       </Typography.Text>
-    </>
+    </div>
   )
 }
 
-const SimpleComponent = ({ result, loading }) => {
+const TranslationDisplay = ({ data, loading }) => {
+  const [highLightId, setHighLightId] = useState(null);
+
+  const audioRef = useRef(null);
+
+  const recitation = (word) => {
+    audioRef.current.src = `https://dict.youdao.com/dictvoice?audio=${word}&type=2`
+    audioRef.current.play();
+  }
+
   return (
-    <Spin spinning={loading}>
-      <TextArea
-        readOnly
-        variant="borderless"
-        value={`${result || ""}`}
-        autoSize={{}}
-        placeholder={`This is a translation tool with phonetic transcription; click to start translating.\n/ðɪs ɪz ə ˈtrænsleɪʃən tuːl wɪð fəˈnɛtɪk ˈtrænskrɪpʃən; klɪk tə stɑːt ˈtrænzˌleɪtɪŋ/`}
-      />
-    </Spin>
+    <div style={{ padding: "0 11px" }}>
+      <Spin spinning={loading}>
+        {data && data.a && <Typography.Text>{data.a}</Typography.Text>}
+        <div style={{minHeight: 10}}></div>
+        <audio ref={audioRef} preload="auto"/>
+        {data && data.b &&
+          <Space wrap size={[4, 10]}>
+            {data.b.map((item, idx) => (
+              <Tooltip title={item.z} key={idx}>
+                <div
+                  style={{cursor: "pointer"}}
+                  onClick={() => recitation(item.w)}
+                  onMouseEnter={() => {
+                    setHighLightId(idx)
+                  }}
+                  onMouseLeave={() => {
+                    setHighLightId(null)
+                  }}
+                >
+                  <Typography.Text mark={highLightId === idx}> {item.w}</Typography.Text>
+                  <br/>
+                  <Typography.Text style={{lineHeight: 0}} type={"secondary"}
+                                   mark={highLightId === idx}> {item.p}</Typography.Text>
+                </div>
+              </Tooltip>
+            ))}
+            <Button
+              style={{marginLeft: 10}}
+              icon={<SoundOutlined/>}
+              size={"small"}
+              onClick={() => {
+                let text = "";
+                const arr = data.b;
+                for (let i = 0; i < arr.length; i++) {
+                  text += `${arr[i].w} `;
+                }
+                if (text) {
+                  recitation(text);
+                }
+              }}
+            />
+          </Space>}
+      </Spin>
+    </div>
   )
 }
 
@@ -198,7 +262,7 @@ const PhoneticSymbols = () => {
     <>
       <Space size={isMobile ? 20 : 60} align={"start"}>
 
-        <Space direction="vertical" size={1} align={"start"}>
+      <Space direction="vertical" size={1} align={"start"}>
           <Typography.Text strong>Monophthongs</Typography.Text>
           <Typography.Text>[ɑː] - class</Typography.Text>
           <Typography.Text>[ʌ] - cup</Typography.Text>
