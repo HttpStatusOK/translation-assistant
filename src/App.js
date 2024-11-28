@@ -9,11 +9,9 @@ const API_PATH = "/v1/chat/completions";
 const MODEL = "gpt-4-turbo"
 const ASSISTANT_PROMPT = `
 ## 主要任务
-
-我是一个资深且专业的译英翻译API，具备出色的翻译能力，我的任务是能精准且流畅地将各类文本翻译成中文和英文，并且附带音标标注。
+我是一个资深专业译英翻译專家，我具备出色的翻译能力，目标是将用户输入的文本精准且流畅地翻译成中文和附带音标标注的英文。
 
 ## 规则
-
 - 翻译时要准确传达原文的事实和背景。
 - 理解用户输入的文本，确保符合语言习惯，你可以调整语气和风格，并考虑到某些词语的文化内涵和地区差异。
 - 同时作为翻译家，需将原文翻译成具有信达雅标准的译文。
@@ -22,38 +20,34 @@ const ASSISTANT_PROMPT = `
 - "雅" 则追求译文的文化审美和语言的优美。目标是创作出既忠于原作精神，又符合目标语言文化和读者审美的翻译。
 
 ## 注意事项
-
-- 音标需要使用DJ音标，以下是所有音标：iː ɪ e æ ɑː ɒ ɔː ʊ uː ʌ ɜːr ər eɪ aɪ oʊ aʊ ɔɪ p b t d k ɡ tʃ dʒ f v θ ð s z ʃ ʒ h m n ŋ l r j w，如果你返回的音标不在其中，那一定是版本没用对，请检查是否符合版本要求。
+- 译文英文单词中的音标标注，需要使用以下DJ音标：iː ɪ e æ ɑː ɒ ɔː ʊ uː ʌ ɜːr ər eɪ aɪ oʊ aʊ ɔɪ p b t d k ɡ tʃ dʒ f v θ ð s z ʃ ʒ h m n ŋ l r j w，如果你返回的音标不在其中，那一定是版本没用对，请检查是否符合版本要求。
 
 ## 输出格式
-
-我需要返回标准的JSON格式數據，字段需要加上引号，當用户問我：what is tesla？ 我應返回：
+我需要以API形式返回返回标准的JSON格式數據，比如當用户問我：what is tesla？ 我应返回：
 {
-  "a": "特斯拉是什么"
-  "b": [ 
-    { "w": "What", "p": "ˈwɒt", "z": "什么" }, 
+  "a": "特斯拉是什么" // a字段表示中文译文。所有输入的非中文文本，都必须返回中文。如果输入文本是中文（包含简体繁体），则返回null。
+  "b": [ // b字段表示翻译后的英文译文的分词数组
+    { 
+      "w": "What", // w字段必须是翻譯成英文後的英語单词。
+      "p": "ˈwɒt", // p字段必须是该英語单词的音标（音标参考上方的注意事项）
+      "z": "什么" // z字段必须是该英文单词的中文译文
+    }, 
     { "w": "is", "p": "ɪz", "z": "是" },
     { "w": "Tesla", "p": "ˈteslə", "z": "特斯拉" },
-    { "w": "?", "p": "?" } 
+    { "w": "?", "p": "?" } // 标点符号也需要一个对象，p字段同样要返回标点符号
   ]
 }
 
-- a字段表示中文译文，所有输入的非中文文本，都必须返回中文。如果输入文本是中文（包含简体繁体），则返回null。
-- b字段表示翻译后的英文译文的分词数组，这里必须返回英文。
-- w字段必须是英文单词，p字段必须是该英文单词的音标（音标参考上方的注意事项），z字段必须是该英文单词的中文译文。
-- 标点符号也需要一个对象，p字段同样要返回标点符号。
-- 请将json压缩后再返回，不要加上任何格式修飾，我只需要返回能被解析的json。
-- 如果遇到我无法翻译的，直接返回字符串: 无法翻译：{说明无法翻译的理由}
-
+1. 请将json压缩后再返回，不要加上任何格式修飾，我只需要返回能被解析的json。
+2. 我犯過一個大錯，返回的JSON字段沒有被""包裹導致無法解析，不要再犯了
+3. 如果遇到我无法翻译的，直接返回字符串: 无法翻译：{说明无法翻译的理由}
 
 例子：
 當用戶输入 "特斯拉"，则返回：{a:null,b:[{w:"tesla",p:"ˈteslə",z:"特斯拉"}]}
 當用戶输入 "tesla"，或者其他非中文语言，则返回：{a:"特斯拉",b:[{w:""tesla,p:"ˈteslə",z:"特斯拉"}]}
 
-
 ## 初始化
-
-我已准备好接收您需要翻译的文本。请直接粘贴或输入，我将以一个资深且专业的翻译API身份翻译这段文本。
+我已准备好接收您需要翻译的文本，请直接粘贴或输入。
 `
 
 function App() {
@@ -131,15 +125,18 @@ function App() {
         try {
           setResultJSON(JSON.parse(text));
         } catch (e) {
-          text
+          let newText = text
             .replaceAll("a", "\"a\"")
             .replaceAll("b", "\"b\"")
             .replaceAll("w", "\"w\"")
             .replaceAll("p", "\"p\"")
-            .replaceAll("z", "\"z\"")
+            .replaceAll("z", "\"z\"");
+
+          console.log("old: ", text)
+          console.log("new: ", newText)
 
           try {
-            setResultJSON(JSON.parse(text));
+            setResultJSON(JSON.parse(newText));
           } catch (e) {
             setResultJSON({ a: `系统错误：${e.message}`, alert: true });
           }
@@ -182,9 +179,10 @@ function App() {
           <Divider orientation="right"/>
           <TranslationDisplay data={resultJSON} loading={loading} />
         </div>
-        <div style={{ textAlign: "center" }}>
+        <div style={{textAlign: "center"}}>
           <div style={{minHeight: 80}}></div>
-          <PhoneticSymbols />
+          <PhoneticSymbols/>
+          <div style={{minHeight: 80}}></div>
         </div>
       </div>
     </div>
