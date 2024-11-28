@@ -131,7 +131,18 @@ function App() {
         try {
           setResultJSON(JSON.parse(text));
         } catch (e) {
-          setResultJSON({ a: `系统错误：${e.message}`, alert: true });
+          text
+            .replaceAll("a", "\"a\"")
+            .replaceAll("b", "\"b\"")
+            .replaceAll("w", "\"w\"")
+            .replaceAll("p", "\"p\"")
+            .replaceAll("z", "\"z\"")
+
+          try {
+            setResultJSON(JSON.parse(text));
+          } catch (e) {
+            setResultJSON({ a: `系统错误：${e.message}`, alert: true });
+          }
         }
       })
       .finally(() => setLoading(false))
