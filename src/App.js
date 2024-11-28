@@ -233,7 +233,7 @@ const TranslationDisplay = ({ data, loading }) => {
                     setHighLightId(null)
                   }}
                 >
-                  <Typography.Text mark={highLightId === idx}> {item.w}</Typography.Text>
+                  <Typography.Text style={{lineHeight: 0}} mark={highLightId === idx}> {item.w}</Typography.Text>
                   <br/>
                   <Typography.Text style={{lineHeight: 0}} type={"secondary"}
                                    mark={highLightId === idx}> {item.p}</Typography.Text>
