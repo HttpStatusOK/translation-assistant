@@ -1,9 +1,16 @@
 import TextArea from "antd/es/input/TextArea";
-import {Alert, Button, Collapse, Divider, Space, Spin, Tooltip, Typography} from "antd";
+import {Alert, Button, Collapse, Divider, Popover, Space, Spin, Tooltip, Typography} from "antd";
 import {useEffect, useRef, useState} from "react";
 import {useSearchParams} from 'react-router-dom';
 import {isMobile} from 'react-device-detect';
-import {CaretDownOutlined, CaretRightOutlined, CopyOutlined, SoundOutlined} from "@ant-design/icons";
+import {
+  CaretDownOutlined,
+  CaretRightOutlined,
+  CopyOutlined,
+  LoadingOutlined,
+  RedoOutlined,
+  SoundOutlined
+} from "@ant-design/icons";
 import ClipboardJS from "clipboard";
 
 const API_PATH = "/v1/chat/completions";
@@ -44,7 +51,7 @@ const ASSISTANT_PROMPT = `
 字段 "b"：值是一个数组，包含一组对象。每个对象代表一个单词的信息，包含以下字段：
 "w": 代表翻譯成英文後的英語单词，注意：必须翻译成英文
 "p": 代表这个单词的音标，注意：必须是英文单词音标
-"z": 代表这个单词的中文翻译
+"z": 代表这个单词的中文直接翻译，不用关联上下文
 
 1. 请将json压缩后再返回，不要加上任何格式修飾，我只需要返回能被解析的json。
 2. 我犯過很多错误，请不要再犯了：
@@ -212,7 +219,15 @@ function App() {
             }}
           />
           <Divider orientation="right"/>
-          <TranslationDisplay data={resultJSON} loading={loading} />
+          <TranslationDisplay
+            data={resultJSON}
+            loading={loading}
+            isInit={init}
+            retry={() => {
+              setResultJSON(null);
+              fetchData(inputValue);
+            }}
+          />
         </div>
         <div style={{textAlign: "center"}}>
           <div style={{minHeight: 80}}></div>
@@ -242,7 +257,7 @@ function App() {
 const Header = () => {
   return (
     <div style={{ textAlign: "center" }}>
-      <Typography.Title level={2} style={{ marginBottom: 0 }}>Translation Assistant</Typography.Title>
+      <Typography.Title level={1} style={{ marginBottom: 0 }}>Translation Assistant</Typography.Title>
       <div>
         <Typography.Text italic type={"secondary"} style={{ fontSize: 12 }}>Created by&nbsp;
           <Typography.Link
@@ -272,7 +287,7 @@ const Header = () => {
   )
 }
 
-const TranslationDisplay = ({ data, loading }) => {
+const TranslationDisplay = ({ data, loading, retry, isInit }) => {
   const [highLightId, setHighLightId] = useState(null);
 
   const audioRef = useRef(null);
@@ -284,52 +299,82 @@ const TranslationDisplay = ({ data, loading }) => {
 
   return (
     <div style={{ padding: "0 11px" }}>
-      <Spin spinning={loading}>
-        {data && data.a && <Typography.Text type={data.alert && "warning"}>{data.a}</Typography.Text>}
-        <div style={{minHeight: 10}}></div>
-        <audio ref={audioRef} preload="auto"/>
-        {data && data.b &&
-          <Space wrap size={[4, 10]}>
-            {data.b.map((item, idx) => (
-              <Tooltip title={item.z} key={idx}>
-                <div
-                  style={{cursor: "pointer"}}
-                  onClick={() => recitation(item.w)}
-                  onMouseEnter={() => {
-                    setHighLightId(idx)
-                  }}
-                  onMouseLeave={() => {
-                    setHighLightId(null)
-                  }}
+      {data && data.a &&
+        <>
+          <Typography.Text type={data.alert && "warning"}>{data.a}</Typography.Text>
+          {data.alert && <Typography.Link onClick={retry} style={{ marginLeft: 10 }}>重试</Typography.Link>}
+        </>}
+      <div style={{minHeight: 10}}></div>
+      <audio ref={audioRef} preload="auto"/>
+      <Spin spinning={loading} indicator={<LoadingOutlined spin/>}>
+        <div style={{minHeight: 38}}>
+          {data && data.b &&
+            <Space wrap size={[4, 10]}>
+              {data.b.map((item, idx) => (
+                <Popover
+                  content={() => (
+                    <>
+                      <Typography.Text>{item.w}</Typography.Text>
+                      <br/>
+                      <Typography.Text>{item.p}</Typography.Text>
+                    </>
+                  )}
+                  title={item.z}
+                  key={idx}
                 >
-                  <Typography.Text style={{lineHeight: 0, fontSize: 16}} mark={highLightId === idx}> {item.w}</Typography.Text>
-                  <br/>
-                  <Typography.Text style={{lineHeight: 0, fontSize: 16}} type={"secondary"} mark={highLightId === idx}> {item.p}</Typography.Text>
-                </div>
-              </Tooltip>
-            ))}
-            <Button
-              style={{marginLeft: 10}}
-              icon={<SoundOutlined/>}
-              size={"small"}
-              onClick={() => {
-                let text = "";
-                const arr = data.b;
-                for (let i = 0; i < arr.length; i++) {
-                  text += `${arr[i].w} `;
-                }
-                if (text) {
-                  recitation(text);
-                }
-              }}
-            />
-            <Button
-              size={"small"}
-              icon={<CopyOutlined/>}
-              className={"copy_btn"}
-              data-clipboard-text={data.b.map(item => item.w).join(" ")}
-            />
-          </Space>}
+                  <div
+                    style={{cursor: "pointer"}}
+                    onClick={() => recitation(item.w)}
+                    onMouseEnter={() => {
+                      setHighLightId(idx)
+                    }}
+                    onMouseLeave={() => {
+                      setHighLightId(null)
+                    }}
+                  >
+                    <Typography.Text style={{lineHeight: 0, fontSize: 16}}
+                                     mark={highLightId === idx}> {item.w}</Typography.Text>
+                    <br/>
+                    <Typography.Text style={{lineHeight: 0, fontSize: 16}} type={"secondary"}
+                                     mark={highLightId === idx}> {item.p}</Typography.Text>
+                  </div>
+                </Popover>
+              ))}
+            </Space>}
+        </div>
+        <div style={{minHeight: 10}}></div>
+        {data && data.b &&
+          <div style={{textAlign: "right"}}>
+            <Space>
+              <Button
+                icon={<SoundOutlined/>}
+                size={"small"}
+                onClick={() => {
+                  let text = "";
+                  const arr = data.b;
+                  for (let i = 0; i < arr.length; i++) {
+                    text += `${arr[i].w} `;
+                  }
+                  if (text) {
+                    recitation(text);
+                  }
+                }}
+              />
+              <Button
+                size={"small"}
+                icon={<CopyOutlined/>}
+                className={"copy_btn"}
+                data-clipboard-text={data.b.map(item => item.w).join(" ")}
+              />
+              {isInit &&
+                <Button
+                  size={"small"}
+                  icon={<RedoOutlined/>}
+                  onClick={retry}
+                />}
+            </Space>
+          </div>
+        }
       </Spin>
     </div>
   )
