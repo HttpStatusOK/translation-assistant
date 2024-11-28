@@ -201,7 +201,7 @@ function App() {
                 setInit(true);
               }
             }}
-            style={{paddingTop: 50}}
+            style={{paddingTop: 50, fontSize: 16}}
             variant="borderless"
             value={inputValue}
             onChange={handleInputChange}
@@ -242,30 +242,32 @@ function App() {
 const Header = () => {
   return (
     <div style={{ textAlign: "center" }}>
-      <Typography.Title level={2} style={{ marginBottom: 0 }}>Translation Assistant</Typography.Title>
-      <Typography.Text italic type={"secondary"}>Created by&nbsp;
-        <Typography.Link
-          target={"_blank"}
-          href={"https://github.com/HttpStatusOK"}
-          underline
-          italic
-          style={{ color: "#898989" }}
-        >
-          Edison
-        </Typography.Link>.&nbsp;
-      </Typography.Text>
-      <Typography.Text italic type={"secondary"}>View&nbsp;
-        <Typography.Link
-          target={"_blank"}
-          href={"https://github.com/HttpStatusOK/translation-assistant"}
-          underline
-          italic
-          style={{ color: "#898989" }}
-        >
-          source code
-        </Typography.Link>.&nbsp;
-        <Typography.Text italic type={"secondary"}>Based on OpenAI development.</Typography.Text>
-      </Typography.Text>
+      <Typography.Title level={1} style={{ marginBottom: 0 }}>Translation Assistant</Typography.Title>
+      <div>
+        <Typography.Text italic type={"secondary"} style={{ fontSize: 12 }}>Created by&nbsp;
+          <Typography.Link
+            target={"_blank"}
+            href={"https://github.com/HttpStatusOK"}
+            underline
+            italic
+            style={{ fontSize: 12, color: "#898989" }}
+          >
+            Edison
+          </Typography.Link>.&nbsp;
+        </Typography.Text>
+        <Typography.Text italic type={"secondary"} style={{ fontSize: 12 }}>View&nbsp;
+          <Typography.Link
+            target={"_blank"}
+            href={"https://github.com/HttpStatusOK/translation-assistant"}
+            underline
+            italic
+            style={{ fontSize: 12, color: "#898989" }}
+          >
+            source code
+          </Typography.Link>.&nbsp;
+          <Typography.Text italic type={"secondary"} style={{ fontSize: 12 }}>Based on OpenAI development.</Typography.Text>
+        </Typography.Text>
+      </div>
     </div>
   )
 }
@@ -300,10 +302,9 @@ const TranslationDisplay = ({ data, loading }) => {
                     setHighLightId(null)
                   }}
                 >
-                  <Typography.Text style={{lineHeight: 0}} mark={highLightId === idx}> {item.w}</Typography.Text>
+                  <Typography.Text style={{lineHeight: 0, fontSize: 16}} mark={highLightId === idx}> {item.w}</Typography.Text>
                   <br/>
-                  <Typography.Text style={{lineHeight: 0}} type={"secondary"}
-                                   mark={highLightId === idx}> {item.p}</Typography.Text>
+                  <Typography.Text style={{lineHeight: 0, fontSize: 16}} type={"secondary"} mark={highLightId === idx}> {item.p}</Typography.Text>
                 </div>
               </Tooltip>
             ))}
