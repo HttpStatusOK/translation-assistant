@@ -242,7 +242,7 @@ function App() {
 const Header = () => {
   return (
     <div style={{ textAlign: "center" }}>
-      <Typography.Title level={1} style={{ marginBottom: 0 }}>Translation Assistant</Typography.Title>
+      <Typography.Title level={2} style={{ marginBottom: 0 }}>Translation Assistant</Typography.Title>
       <div>
         <Typography.Text italic type={"secondary"} style={{ fontSize: 12 }}>Created by&nbsp;
           <Typography.Link
