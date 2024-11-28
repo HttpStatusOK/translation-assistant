@@ -1,9 +1,9 @@
 import TextArea from "antd/es/input/TextArea";
-import {Alert, Button, Divider, Space, Spin, Tooltip, Typography} from "antd";
+import {Alert, Button, Collapse, Divider, Space, Spin, Tooltip, Typography} from "antd";
 import {useEffect, useRef, useState} from "react";
 import {useSearchParams} from 'react-router-dom';
 import {isMobile} from 'react-device-detect';
-import {CopyOutlined, SoundOutlined} from "@ant-design/icons";
+import {CaretDownOutlined, CaretRightOutlined, CopyOutlined, SoundOutlined} from "@ant-design/icons";
 import ClipboardJS from "clipboard";
 
 const API_PATH = "/v1/chat/completions";
@@ -65,15 +65,16 @@ function App() {
   const [apiDomain] = useState(searchParams.get("apiDomain") || null);
   const [apiKey] = useState(searchParams.get("apiKey") || null);
 
-  const [inputValue, setInputValue] = useState('');
+  const [init, setInit] = useState(false);
+  const [inputValue, setInputValue] = useState();
   const [loading, setLoading] = useState(false);
-  const [resultJSON, setResultJSON] = useState(null);
+  const [resultJSON, setResultJSON] = useState(JSON.parse("{\"a\":null,\"b\":[{\"w\":\"This\",\"p\":\"ðɪs\",\"z\":\"这是\"},{\"w\":\"is\",\"p\":\"ɪz\",\"z\":\"是\"},{\"w\":\"a\",\"p\":\"ə\",\"z\":\"一个\"},{\"w\":\"phonetic\",\"p\":\"fəˈnɛtɪk\",\"z\":\"带音标标注的\"},{\"w\":\"translation\",\"p\":\"ˌtrænsˈleɪʃən\",\"z\":\"翻译\"},{\"w\":\"tool,\",\"p\":\"tuːl,\",\"z\":\"工具，\"},{\"w\":\"click\",\"p\":\"klɪk\",\"z\":\"点击\"},{\"w\":\"to\",\"p\":\"tu\",\"z\":\"以\"},{\"w\":\"start\",\"p\":\"stɑːrt\",\"z\":\"开始\"},{\"w\":\"translating\",\"p\":\"ˈtrænslˌeɪtɪŋ\",\"z\":\"翻译\"},{\"w\":\"now!\",\"p\":\"naʊ!\",\"z\":\"吧！\"}]}"));
 
   const [timeoutId, setTimeoutId] = useState(0);
 
   useEffect(() => {
     const clipboard = new ClipboardJS(".copy_btn");
-    
+
     clipboard.on('success', () => {
       console.log('Text copied to clipboard!');
     });
@@ -179,6 +180,8 @@ function App() {
     };
   }, [timeoutId]);
 
+  const [collapseItems, setCollapseItems] = useState([]);
+
   return (
     <div>
       <div style={{maxWidth: 600, margin: "auto", padding: "0 20px"}}>
@@ -192,6 +195,12 @@ function App() {
               />
             </div>}
           <TextArea
+            onFocus={() => {
+              if (!init) {
+                setResultJSON(null);
+                setInit(true);
+              }
+            }}
             style={{paddingTop: 50}}
             variant="borderless"
             value={inputValue}
@@ -207,7 +216,22 @@ function App() {
         </div>
         <div style={{textAlign: "center"}}>
           <div style={{minHeight: 80}}></div>
-          <PhoneticSymbols/>
+          <Collapse
+            ghost
+            items={[
+              {
+                key: '1',
+                label: (
+                  <Typography.Text type={"secondary"}>
+                    {collapseItems.includes("1") ? <CaretDownOutlined /> : <CaretRightOutlined />} {collapseItems.includes("1") ? "Close" : "Show"} phonetic (DJ)
+                  </Typography.Text>
+                ),
+                showArrow: false,
+                children: <PhoneticSymbols />,
+              }
+            ]}
+            onChange={e => setCollapseItems(e)}
+          />
           <div style={{minHeight: 80}}></div>
         </div>
       </div>
