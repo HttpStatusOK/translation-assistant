@@ -3,7 +3,8 @@ import {Alert, Button, Divider, Space, Spin, Tooltip, Typography} from "antd";
 import {useEffect, useRef, useState} from "react";
 import {useSearchParams} from 'react-router-dom';
 import {isMobile} from 'react-device-detect';
-import {SoundOutlined} from "@ant-design/icons";
+import {CopyOutlined, SoundOutlined} from "@ant-design/icons";
+import ClipboardJS from "clipboard";
 
 const API_PATH = "/v1/chat/completions";
 const MODEL = "gpt-4-turbo"
@@ -25,18 +26,25 @@ const ASSISTANT_PROMPT = `
 ## 输出格式
 我需要以API形式返回返回标准的JSON格式數據，比如當用户問我：what is tesla？ 我应返回：
 {
-  "a": "特斯拉是什么" // a字段表示中文译文。所有输入的非中文文本，都必须返回中文。如果输入文本是中文（包含简体繁体），则返回null。
-  "b": [ // b字段表示翻译后的英文译文的分词数组
+  "a": "特斯拉是什么"
+  "b": [ 
     { 
-      "w": "What", // w字段必须是翻譯成英文後的英語单词。
-      "p": "ˈwɒt", // p字段必须是该英語单词的音标（音标参考上方的注意事项）
-      "z": "什么" // z字段必须是该英文单词的中文译文
+      "w": "What",
+      "p": "ˈwɒt", 
+      "z": "什么" 
     }, 
     { "w": "is", "p": "ɪz", "z": "是" },
-    { "w": "Tesla", "p": "ˈteslə", "z": "特斯拉" },
-    { "w": "?", "p": "?" } // 标点符号也需要一个对象，p字段同样要返回标点符号
+    { "w": "Tesla?", "p": "ˈteslə", "z": "特斯拉" } // 注意标点符号也要在单词上保留
   ]
 }
+
+这个对象是一个JSON格式的数据。在这个例子中，JSON对象包含两个字段："a" 和 "b"。
+
+字段 "a"：表示中文译文。所有输入的非中文文本，都必须返回中文。如果输入文本是中文，则返回null。
+字段 "b"：值是一个数组，包含一组对象。每个对象代表一个单词的信息，包含以下字段：
+"w": 代表翻譯成英文後的英語单词，注意：必须翻译成英文
+"p": 代表这个单词的音标，注意：必须是英文单词音标
+"z": 代表这个单词的中文翻译
 
 1. 请将json压缩后再返回，不要加上任何格式修飾，我只需要返回能被解析的json。
 2. 我犯過很多错误，请不要再犯了：
@@ -62,6 +70,22 @@ function App() {
   const [resultJSON, setResultJSON] = useState(null);
 
   const [timeoutId, setTimeoutId] = useState(0);
+
+  useEffect(() => {
+    const clipboard = new ClipboardJS(".copy_btn");
+    
+    clipboard.on('success', () => {
+      console.log('Text copied to clipboard!');
+    });
+
+    clipboard.on('error', () => {
+      console.error('Failed to copy text to clipboard.');
+    });
+
+    return () => {
+      clipboard.destroy();
+    };
+  }, []);
 
   const handleInputChange = (event) => {
     const { value } = event.target;
@@ -128,11 +152,11 @@ function App() {
           setResultJSON(JSON.parse(text));
         } catch (e) {
           let newText = text
-            .replaceAll("a", "\"a\"")
-            .replaceAll("b", "\"b\"")
-            .replaceAll("w", "\"w\"")
-            .replaceAll("p", "\"p\"")
-            .replaceAll("z", "\"z\"");
+            .replaceAll("a:", "\"a\":")
+            .replaceAll("b:", "\"b\":")
+            .replaceAll("w:", "\"w\":")
+            .replaceAll("p:", "\"p\":")
+            .replaceAll("z:", "\"z\":");
 
           console.log("old: ", text)
           console.log("new: ", newText)
@@ -273,6 +297,12 @@ const TranslationDisplay = ({ data, loading }) => {
                   recitation(text);
                 }
               }}
+            />
+            <Button
+              size={"small"}
+              icon={<CopyOutlined/>}
+              className={"copy_btn"}
+              data-clipboard-text={data.b.map(item => item.w).join(" ")}
             />
           </Space>}
       </Spin>
