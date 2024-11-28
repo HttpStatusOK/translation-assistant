@@ -1,11 +1,12 @@
 import TextArea from "antd/es/input/TextArea";
-import {Alert, Button, Divider, message, Space, Spin, Tooltip, Typography} from "antd";
+import {Alert, Button, Divider, Space, Spin, Tooltip, Typography} from "antd";
 import {useEffect, useRef, useState} from "react";
 import {useSearchParams} from 'react-router-dom';
 import {isMobile} from 'react-device-detect';
 import {SoundOutlined} from "@ant-design/icons";
 
 const API_PATH = "/v1/chat/completions";
+const MODEL = "gpt-4-turbo"
 const ASSISTANT_PROMPT = `
 ## 主要任务
 
@@ -26,26 +27,29 @@ const ASSISTANT_PROMPT = `
 
 ## 输出格式
 
-我需要返回 JSON 格式數據，例如，當用户問我：what is tesla：
-
-
-我應返回：
+我需要返回标准的JSON格式數據，字段需要加上引号，當用户問我：what is tesla？ 我應返回：
 {
-  a: "特斯拉是什么" // a 字段表示中文译文，所有输入的非中文文本，都必须返回中文。如果输入文本是中文（包含简体繁体），则返回null
-  b: [ // b 字段表示翻译后的英文译文的分词数组，这里必须返回英文
-    { w: "What", p: "ˈwɒt", z: "什么" }, // w必须是英文单词，p必须是该英文单词的音标（音标参考上方的注意事项），z必须是该英文单词的中文译文
-    { w: "is", p: "ɪz", z: "是" },
-    { w: "Tesla", p: "ˈteslə", z: "特斯拉" },
-    { w: "?", p: "?" } // 标点符号也需要一个对象，p同样要返回标点符号
+  "a": "特斯拉是什么"
+  "b": [ 
+    { "w": "What", "p": "ˈwɒt", "z": "什么" }, 
+    { "w": "is", "p": "ɪz", "z": "是" },
+    { "w": "Tesla", "p": "ˈteslə", "z": "特斯拉" },
+    { "w": "?", "p": "?" } 
   ]
 }
 
+- a字段表示中文译文，所有输入的非中文文本，都必须返回中文。如果输入文本是中文（包含简体繁体），则返回null。
+- b字段表示翻译后的英文译文的分词数组，这里必须返回英文。
+- w字段必须是英文单词，p字段必须是该英文单词的音标（音标参考上方的注意事项），z字段必须是该英文单词的中文译文。
+- 标点符号也需要一个对象，p字段同样要返回标点符号。
+- 请将json压缩后再返回，不要加上任何格式修飾，我只需要返回能被解析的json。
+- 如果遇到我无法翻译的，直接返回字符串: 无法翻译：{说明无法翻译的理由}
 
-我输入 "特斯拉"，则返回：{a:null,b:[{w:"tesla",p:"ˈteslə",z:"特斯拉"}]}
-我输入 "tesla" 或者其他非中文语言，则返回：{a:"特斯拉",b:[{w:""tesla,p:"ˈteslə",z:"特斯拉"}]}
 
+例子：
+當用戶输入 "特斯拉"，则返回：{a:null,b:[{w:"tesla",p:"ˈteslə",z:"特斯拉"}]}
+當用戶输入 "tesla"，或者其他非中文语言，则返回：{a:"特斯拉",b:[{w:""tesla,p:"ˈteslə",z:"特斯拉"}]}
 
-注意，请将json压缩后再返回。不要加上任务格式，我只需要返回能被解析的json，如果遇到我无法翻译的，直接返回-1
 
 ## 初始化
 
@@ -54,13 +58,11 @@ const ASSISTANT_PROMPT = `
 
 function App() {
   const [searchParams] = useSearchParams();
-
   const [apiDomain] = useState(searchParams.get("apiDomain") || null);
   const [apiKey] = useState(searchParams.get("apiKey") || null);
 
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
-
   const [resultJSON, setResultJSON] = useState(null);
 
   const [timeoutId, setTimeoutId] = useState(0);
@@ -87,18 +89,20 @@ function App() {
 
   const fetchData = (value) => {
     setLoading(true);
+    const messages = [
+      {
+        role: "system",
+        content: ASSISTANT_PROMPT
+      },
+      {
+        role: "user",
+        content: value || inputValue
+      },
+    ]
+
     const body = {
-      model: "gpt-4o-2024-11-20",
-      messages: [
-        {
-          role: "system",
-          content: ASSISTANT_PROMPT
-        },
-        {
-          role: "user",
-          content: value || inputValue
-        },
-      ]
+      model: MODEL,
+      messages
     }
 
     const config = {
@@ -118,13 +122,17 @@ function App() {
           return;
         }
 
-        try {
-          const text = res.choices[0].message.content;
-          setResultJSON(JSON.parse(text));
-        } catch (e) {
-          message.warning(`该文本暂时无法翻译`)
+        const text = res.choices[0].message.content;
+        if (text.startsWith("无法翻译")) {
+          setResultJSON({ a: text, alert: true });
+          return;
         }
 
+        try {
+          setResultJSON(JSON.parse(text));
+        } catch (e) {
+          setResultJSON({ a: `系统错误：${e.message}`, alert: true });
+        }
       })
       .finally(() => setLoading(false))
   }
@@ -216,7 +224,7 @@ const TranslationDisplay = ({ data, loading }) => {
   return (
     <div style={{ padding: "0 11px" }}>
       <Spin spinning={loading}>
-        {data && data.a && <Typography.Text>{data.a}</Typography.Text>}
+        {data && data.a && <Typography.Text type={data.alert && "warning"}>{data.a}</Typography.Text>}
         <div style={{minHeight: 10}}></div>
         <audio ref={audioRef} preload="auto"/>
         {data && data.b &&
@@ -266,7 +274,7 @@ const PhoneticSymbols = () => {
     <>
       <Space size={isMobile ? 20 : 60} align={"start"}>
 
-      <Space direction="vertical" size={1} align={"start"}>
+        <Space direction="vertical" size={1} align={"start"}>
           <Typography.Text strong>单元音</Typography.Text>
           <Typography.Text>[ɑː] - class</Typography.Text>
           <Typography.Text>[ʌ] - cup</Typography.Text>
