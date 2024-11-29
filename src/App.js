@@ -17,7 +17,7 @@ const API_PATH = "/v1/chat/completions";
 const MODEL = "gpt-4-turbo"
 const ASSISTANT_PROMPT = `
 ## 主要任务
-我是一个资深专业译英翻译專家，我具备出色的翻译能力，目标是将用户输入的文本精准且流畅地翻译成中文和附带音标标注的英文。
+我是一个资深专业译英翻译專家，我具备出色的翻译能力，目标是将用户输入的任意语言文本精准且流畅地翻译成中文和附带音标标注的英文。
 
 ## 规则
 - 翻译时要准确传达原文的事实和背景。
@@ -26,9 +26,6 @@ const ASSISTANT_PROMPT = `
 - "信" 即忠实于原文的内容与意图；
 - "达" 意味着译文应通顺易懂，表达清晰；
 - "雅" 则追求译文的文化审美和语言的优美。目标是创作出既忠于原作精神，又符合目标语言文化和读者审美的翻译。
-
-## 注意事项
-- 译文英文单词中的音标标注，需要使用以下DJ音标：iː ɪ e æ ɑː ɒ ɔː ʊ uː ʌ ɜːr ər eɪ aɪ oʊ aʊ ɔɪ p b t d k ɡ tʃ dʒ f v θ ð s z ʃ ʒ h m n ŋ l r j w，如果你返回的音标不在其中，那一定是版本没用对，请检查是否符合版本要求。
 
 ## 输出格式
 我需要以API形式返回返回标准的JSON格式數據，比如當用户問我：what is tesla？ 我应返回：
@@ -57,7 +54,8 @@ const ASSISTANT_PROMPT = `
 2. 我犯過很多错误，请不要再犯了：
   - 返回的JSON字段沒有被""包裹導致無法解析
   - 输入中文，返回的b数组中的对象w是中文，p是拼音，这是错误的
-3. 如果遇到我无法翻译的，直接返回字符串: 无法翻译：{说明无法翻译的理由}
+3. 译文英文单词中的音标标注，需要使用以下DJ音标：iː ɪ e æ ɑː ɒ ɔː ʊ uː ʌ ɜːr ər eɪ aɪ oʊ aʊ ɔɪ p b t d k ɡ tʃ dʒ f v θ ð s z ʃ ʒ h m n ŋ l r j w，如果你返回的音标不在其中，那一定是版本没用对，请检查是否符合版本要求。
+4. 如果遇到我无法翻译的，直接返回字符串: 无法翻译：{说明无法翻译的理由}
 
 例子：
 當用戶输入 "特斯拉"，则返回：{a:null,b:[{w:"tesla",p:"ˈteslə",z:"特斯拉"}]}
@@ -66,6 +64,8 @@ const ASSISTANT_PROMPT = `
 ## 初始化
 我已准备好接收您需要翻译的文本，请直接粘贴或输入。
 `
+const INIT_DATA =
+    "{\"a\":null,\"b\":[{\"w\":\"A\",\"p\":\"ə\",\"z\":\"一個\"},{\"w\":\"helpful\",\"p\":\"ˈhɛlpfʊl\",\"z\":\"有幫助的\"},{\"w\":\"translation\",\"p\":\"trænˈsleɪʃən\",\"z\":\"翻譯\"},{\"w\":\"tool\",\"p\":\"tuːl\",\"z\":\"工具\"},{\"w\":\"for\",\"p\":\"fɔːr\",\"z\":\"為了\"},{\"w\":\"English\",\"p\":\"ˈɪŋɡlɪʃ\",\"z\":\"英語\"},{\"w\":\"learning,\",\"p\":\"ˈlɜːrnɪŋ\",\"z\":\"學習,\"},{\"w\":\"input\",\"p\":\"ˈɪnpʊt\",\"z\":\"输入\"},{\"w\":\"text\",\"p\":\"tɛkst\",\"z\":\"文本\"},{\"w\":\"to\",\"p\":\"tu\",\"z\":\"去\"},{\"w\":\"start\",\"p\":\"stɑːrt\",\"z\":\"開始\"},{\"w\":\"translating.\",\"p\":\"ˈtrænslˌeɪtɪŋ\",\"z\":\"翻譯\"}]}"
 
 function App() {
   const [searchParams] = useSearchParams();
@@ -75,7 +75,7 @@ function App() {
   const [init, setInit] = useState(false);
   const [inputValue, setInputValue] = useState();
   const [loading, setLoading] = useState(false);
-  const [resultJSON, setResultJSON] = useState(JSON.parse("{\"a\":null,\"b\":[{\"w\":\"This\",\"p\":\"ðɪs\",\"z\":\"这是\"},{\"w\":\"is\",\"p\":\"ɪz\",\"z\":\"是\"},{\"w\":\"a\",\"p\":\"ə\",\"z\":\"一个\"},{\"w\":\"phonetic\",\"p\":\"fəˈnɛtɪk\",\"z\":\"带音标标注的\"},{\"w\":\"translation\",\"p\":\"ˌtrænsˈleɪʃən\",\"z\":\"翻译\"},{\"w\":\"tool,\",\"p\":\"tuːl,\",\"z\":\"工具，\"},{\"w\":\"click\",\"p\":\"klɪk\",\"z\":\"点击\"},{\"w\":\"to\",\"p\":\"tu\",\"z\":\"以\"},{\"w\":\"start\",\"p\":\"stɑːrt\",\"z\":\"开始\"},{\"w\":\"translating\",\"p\":\"ˈtrænslˌeɪtɪŋ\",\"z\":\"翻译\"},{\"w\":\"now!\",\"p\":\"naʊ!\",\"z\":\"吧！\"}]}"));
+  const [resultJSON, setResultJSON] = useState(JSON.parse(INIT_DATA));
 
   const [timeoutId, setTimeoutId] = useState(0);
 
@@ -212,7 +212,7 @@ function App() {
             variant="borderless"
             value={inputValue}
             onChange={handleInputChange}
-            placeholder="这是一个带音标标注的翻译工具，点击开始翻译吧"
+            placeholder={"可以帮助英语学习的翻译工具，输入文本开始翻译吧"}
             autoSize={{
               minRows: 1,
               maxRows: 5,
@@ -298,16 +298,19 @@ const TranslationDisplay = ({ data, loading, retry, isInit }) => {
   }
 
   return (
-    <div style={{ padding: "0 11px" }}>
-      {data && data.a &&
-        <>
-          <Typography.Text type={data.alert && "warning"}>{data.a}</Typography.Text>
-          {data.alert && <Typography.Link onClick={retry} style={{ marginLeft: 10 }}>重试</Typography.Link>}
-        </>}
-      <div style={{minHeight: 10}}></div>
+    <div style={{padding: "0 11px"}}>
       <audio ref={audioRef} preload="auto"/>
       <Spin spinning={loading} indicator={<LoadingOutlined spin/>}>
-        <div style={{minHeight: 38}}>
+        <div style={{minHeight: 100}}>
+          {data && data.a &&
+            <div>
+              <Typography.Text type={data.alert && "warning"} style={{fontSize: 16}}>{data.a}</Typography.Text>
+              {data.alert &&
+                <Typography.Link onClick={retry} style={{marginLeft: 10, fontSize: 16}}>重试</Typography.Link>}
+              <div style={{minHeight: 20}}></div>
+            </div>}
+
+          {/* Words */}
           {data && data.b &&
             <Space wrap size={[4, 10]}>
               {data.b.map((item, idx) => (
@@ -341,40 +344,41 @@ const TranslationDisplay = ({ data, loading, retry, isInit }) => {
                 </Popover>
               ))}
             </Space>}
-        </div>
-        <div style={{minHeight: 10}}></div>
-        {data && data.b &&
-          <div style={{textAlign: "right"}}>
-            <Space>
-              <Button
-                icon={<SoundOutlined/>}
-                size={"small"}
-                onClick={() => {
-                  let text = "";
-                  const arr = data.b;
-                  for (let i = 0; i < arr.length; i++) {
-                    text += `${arr[i].w} `;
-                  }
-                  if (text) {
-                    recitation(text);
-                  }
-                }}
-              />
-              <Button
-                size={"small"}
-                icon={<CopyOutlined/>}
-                className={"copy_btn"}
-                data-clipboard-text={data.b.map(item => item.w).join(" ")}
-              />
-              {isInit &&
+          <div style={{minHeight: 20}}></div>
+
+          {/* Button group */}
+          {data && data.b &&
+            <div style={{textAlign: "right"}}>
+              <Space>
+                <Button
+                  icon={<SoundOutlined/>}
+                  size={"small"}
+                  onClick={() => {
+                    let text = "";
+                    const arr = data.b;
+                    for (let i = 0; i < arr.length; i++) {
+                      text += `${arr[i].w} `;
+                    }
+                    if (text) {
+                      recitation(text);
+                    }
+                  }}
+                />
                 <Button
                   size={"small"}
-                  icon={<RedoOutlined/>}
-                  onClick={retry}
-                />}
-            </Space>
-          </div>
-        }
+                  icon={<CopyOutlined/>}
+                  className={"copy_btn"}
+                  data-clipboard-text={data.b.map(item => item.w).join(" ")}
+                />
+                {isInit &&
+                  <Button
+                    size={"small"}
+                    icon={<RedoOutlined/>}
+                    onClick={retry}
+                  />}
+              </Space>
+            </div>}
+        </div>
       </Spin>
     </div>
   )
