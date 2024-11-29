@@ -14,7 +14,7 @@ import {
 import ClipboardJS from "clipboard";
 
 const API_PATH = "/v1/chat/completions";
-const MODEL = "gpt-4-turbo"
+const MODEL = "gpt-4o"
 const ASSISTANT_PROMPT = `
 ## 主要任务
 我是一个资深专业译英翻译專家，我具备出色的翻译能力，目标是将用户输入的任意语言文本精准且流畅地翻译成中文和附带音标标注的英文。
@@ -69,6 +69,7 @@ const INIT_DATA =
 
 function App() {
   const [searchParams] = useSearchParams();
+  const [aiModel] = useState(searchParams.get("model") || MODEL);
   const [apiDomain] = useState(searchParams.get("apiDomain") || null);
   const [apiKey] = useState(searchParams.get("apiKey") || null);
 
@@ -129,7 +130,7 @@ function App() {
     ]
 
     const body = {
-      model: MODEL,
+      model: aiModel,
       messages
     }
 
