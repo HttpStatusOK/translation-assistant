@@ -5,7 +5,7 @@ import {useSearchParams} from 'react-router-dom';
 import {isMobile} from 'react-device-detect';
 import {
   CaretDownOutlined,
-  CaretRightOutlined,
+  CaretRightOutlined, CheckOutlined,
   CopyOutlined,
   LoadingOutlined,
   RedoOutlined,
@@ -55,7 +55,7 @@ const ASSISTANT_PROMPT = `
   - 返回的JSON字段沒有被""包裹導致無法解析
   - 输入中文，返回的b数组中的对象w是中文，p是拼音，这是错误的
 3. 译文英文单词中的音标标注，需要使用以下DJ音标：iː ɪ e æ ɑː ɒ ɔː ʊ uː ʌ ɜːr ər eɪ aɪ oʊ aʊ ɔɪ p b t d k ɡ tʃ dʒ f v θ ð s z ʃ ʒ h m n ŋ l r j w，如果你返回的音标不在其中，那一定是版本没用对，请检查是否符合版本要求。
-4. 如果遇到我无法翻译的，直接返回字符串: 无法翻译：{说明无法翻译的理由}
+4. 无论用户输入的是什么内容，都尽力翻译，哪怕只有一个单词。如果遇到我实在无法翻译的，直接返回字符串: 无法翻译：{说明无法翻译的理由}
 
 例子：
 當用戶输入 "特斯拉"，则返回：{a:null,b:[{w:"tesla",p:"ˈteslə",z:"特斯拉"}]}
@@ -79,22 +79,6 @@ function App() {
   const [resultJSON, setResultJSON] = useState(JSON.parse(INIT_DATA));
 
   const [timeoutId, setTimeoutId] = useState(0);
-
-  useEffect(() => {
-    const clipboard = new ClipboardJS(".copy_btn");
-
-    clipboard.on('success', () => {
-      console.log('Text copied to clipboard!');
-    });
-
-    clipboard.on('error', () => {
-      console.error('Failed to copy text to clipboard.');
-    });
-
-    return () => {
-      clipboard.destroy();
-    };
-  }, []);
 
   const handleInputChange = (event) => {
     const { value } = event.target;
@@ -290,6 +274,21 @@ const Header = () => {
 
 const TranslationDisplay = ({ data, loading, retry, isInit }) => {
   const [highLightId, setHighLightId] = useState(null);
+  const [recitationFullPlaying, setRecitationFullPlaying] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const clipboard = new ClipboardJS(".copy_btn");
+
+    clipboard.on('success', () => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000)
+    });
+
+    return () => {
+      clipboard.destroy();
+    };
+  }, []);
 
   const audioRef = useRef(null);
 
@@ -298,9 +297,21 @@ const TranslationDisplay = ({ data, loading, retry, isInit }) => {
     audioRef.current.play();
   }
 
+  const recitationFull = () => {
+    let text = "";
+    const arr = data.b;
+    for (let i = 0; i < arr.length; i++) {
+      text += `${arr[i].w} `;
+    }
+    if (text) {
+      setRecitationFullPlaying(true);
+      recitation(text);
+    }
+  }
+
   return (
     <div style={{padding: "0 11px"}}>
-      <audio ref={audioRef} preload="auto"/>
+      <audio ref={audioRef} preload="auto" onEnded={() => setRecitationFullPlaying(false)}/>
       <Spin spinning={loading} indicator={<LoadingOutlined spin/>}>
         <div style={{minHeight: 100}}>
           {data && data.a &&
@@ -354,20 +365,12 @@ const TranslationDisplay = ({ data, loading, retry, isInit }) => {
                 <Button
                   icon={<SoundOutlined/>}
                   size={"small"}
-                  onClick={() => {
-                    let text = "";
-                    const arr = data.b;
-                    for (let i = 0; i < arr.length; i++) {
-                      text += `${arr[i].w} `;
-                    }
-                    if (text) {
-                      recitation(text);
-                    }
-                  }}
+                  loading={recitationFullPlaying}
+                  onClick={() => recitationFull()}
                 />
                 <Button
                   size={"small"}
-                  icon={<CopyOutlined/>}
+                  icon={copied ? <CheckOutlined /> : <CopyOutlined/>}
                   className={"copy_btn"}
                   data-clipboard-text={data.b.map(item => item.w).join(" ")}
                 />
