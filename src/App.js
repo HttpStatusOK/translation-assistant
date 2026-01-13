@@ -14,7 +14,7 @@ import {
 import ClipboardJS from "clipboard";
 
 const API_PATH = "/v1/chat/completions";
-const MODEL = "gpt-4o"
+const MODEL = "gpt-5-mini"
 const ASSISTANT_PROMPT = `
 ## 主要任务
 我是一个资深专业译英翻译專家，我具备出色的翻译能力，目标是将用户输入的任意语言文本精准且流畅地翻译成中文和附带音标标注的英文。
